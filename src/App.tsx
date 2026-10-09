@@ -45,8 +45,9 @@ function NotConfigured() {
       <div className="card max-w-md p-6">
         <h1 className="text-xl font-extrabold">Almost there ✿</h1>
         <p className="mt-2 text-sm text-muted">
-          Quest HQ needs its Supabase settings. Copy <code>.env.example</code> to <code>.env.local</code> and fill in{' '}
-          <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> (see the README).
+          Quest HQ can’t find valid Supabase settings. Check <code>VITE_SUPABASE_URL</code> (a full address like{' '}
+          <code>https://xxxx.supabase.co</code>) and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> — in <code>.env.local</code> locally,
+          or in the GitHub repository variables for the published site. Enter only the value, not the name.
         </p>
         {import.meta.env.DEV && (
           <a href="?demo" className="btn mt-4 bg-sage-deep text-white">
