@@ -1,0 +1,167 @@
+@import '@fontsource-variable/manrope';
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Manrope Variable', 'Manrope', ui-rounded, system-ui, sans-serif;
+
+  --color-cream: #fbf6ec;
+  --color-paper: #fffdf8;
+  --color-dot: #e8dcc6;
+  --color-ink: #3d3833;
+  --color-muted: #7d7369;
+  --color-line: #ece3d3;
+
+  --color-sage: #a9c4a1;
+  --color-sage-soft: #e7f0e3;
+  --color-sage-deep: #5f8459;
+
+  --color-peach: #f5c3a5;
+  --color-peach-soft: #fdeadf;
+  --color-peach-deep: #c8724a;
+
+  --color-lavender: #c8bde0;
+  --color-lavender-soft: #efebf7;
+  --color-lavender-deep: #7c6ba6;
+
+  --color-butter: #fbe7a1;
+  --color-butter-soft: #fff7d6;
+  --color-butter-deep: #a88520;
+
+  --shadow-card: 0 1px 0 rgb(61 56 51 / 0.04), 0 6px 18px -8px rgb(92 74 50 / 0.22);
+  --shadow-lift: 0 2px 0 rgb(61 56 51 / 0.05), 0 14px 28px -12px rgb(92 74 50 / 0.35);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html {
+    background: var(--color-cream);
+  }
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    /* Bullet-journal dot grid */
+    background-color: var(--color-cream);
+    background-image: radial-gradient(var(--color-dot) 1.1px, transparent 1.3px);
+    background-size: 22px 22px;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+  button {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  :focus-visible {
+    outline: 2.5px solid var(--color-lavender-deep);
+    outline-offset: 2px;
+    border-radius: 10px;
+  }
+}
+
+@layer components {
+  .card {
+    position: relative;
+    border-radius: 1.5rem;
+    background: var(--color-paper);
+    box-shadow: var(--shadow-card);
+    border: 1px solid rgb(236 227 211 / 0.8);
+  }
+  /* A strip of washi tape across the top edge of a card */
+  .tape {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    width: 84px;
+    height: 20px;
+    translate: -50% 0;
+    rotate: -3deg;
+    border-radius: 3px;
+    opacity: 0.85;
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgb(255 255 255 / 0.35) 0 6px,
+      transparent 6px 12px
+    );
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+    pointer-events: none;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    transition: transform 120ms ease, background-color 150ms ease, opacity 150ms;
+  }
+  .btn:active {
+    transform: scale(0.96);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .field {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0 0.85rem;
+    border-radius: 0.9rem;
+    border: 1.5px solid var(--color-line);
+    background: white;
+    font-size: 1rem; /* 16px stops iOS from zooming into inputs */
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-lavender-deep);
+  }
+  .label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .eyebrow {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+@keyframes float-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes wiggle {
+  0%, 100% { rotate: 0deg; }
+  25% { rotate: -6deg; }
+  75% { rotate: 6deg; }
+}
+.animate-pop { animation: pop 260ms ease-out; }
+.animate-float-in { animation: float-in 300ms ease-out; }
+.animate-wiggle { animation: wiggle 600ms ease-in-out 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
