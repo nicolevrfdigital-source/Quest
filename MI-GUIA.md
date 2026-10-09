@@ -21,7 +21,9 @@ Guía personal de cómo está montada mi Quest HQ, cómo usarla y qué hacer si 
 
 ## 📱 Uso diario
 
-- **Hábitos**: toca Nourish, Move o Water para marcarlos. Con las flechas ‹ › cambias de día; tocando la fecha se abre el calendario.
+- **Hábitos**: toca Nourish, Move, Water o el **Daily challenge** para marcarlos. Con las flechas ‹ › cambias de día; tocando la fecha se abre el calendario.
+- **Daily challenge**: un reto de movimiento pequeñito cada día (32 en total, en `src/lib/challenges.ts`). Sale “al azar” pero es el mismo en todos los dispositivos, y no se repite hasta que salieron todos.
+- **Stickers** 🎀: si completo los **4** en un día, gano un sticker (sale un pop-up). El botón **Stickers** del header abre el sticker book. Hay 32 dibujos (`src/components/stickers.tsx`); al completarlos se repiten con un “×2”. No se guardan aparte: se calculan del historial de hábitos.
 - **Little wins**: cuenta los días completados en el quest actual y en total. Nunca se reinicia.
 - **Countdowns**: toca cualquier tarjeta para editarlos, añadir o quitar.
 - **Nota**: toca el post-it y escribe. Se guarda sola.
@@ -78,12 +80,12 @@ Todo se hace en **⚙️ Settings → Quests**:
 ## ⚙️ Cómo está configurado
 
 ### Supabase
-- Tablas: `habit_logs`, `quests`, `countdowns`, `user_settings`, todas protegidas con **RLS** (solo mi usuario ve mis datos).
+- Tablas: `habit_logs` (incluye la columna `challenge`), `quests`, `countdowns`, `user_settings`, todas protegidas con **RLS** (solo mi usuario ve mis datos).
 - Bucket **`photos`** privado. La foto se muestra con enlaces temporales de 1 hora.
 - **Authentication → URL Configuration**
   - Site URL: `https://nicolevrfdigital-source.github.io/Quest/`
   - Redirect URLs: esa misma y `http://localhost:5173/`
-- La estructura de la base de datos está en `supabase/migrations/20261009000000_init.sql` (ya ejecutado; no hace falta volver a correrlo).
+- La estructura de la base de datos está en `supabase/migrations/` — `20261009000000_init.sql` (ya ejecutado) y `20261010000000_daily_challenge.sql` (añade el reto diario; hay que ejecutarlo una vez en el **SQL Editor** de Supabase **antes** de publicar esa versión).
 
 ### GitHub
 - Repositorio **público** (GitHub Pages gratis solo funciona en públicos). Mis datos no están en el código, están en Supabase.
@@ -131,3 +133,4 @@ y abrir http://localhost:5173/. El archivo `.env.local` (con la URL y la key) es
 - **9 oct 2026**: proyecto creado, base de datos configurada, cuenta creada, publicado en GitHub Pages e instalado en el iPad.
   - Se cambió el inicio de sesión de código por correo a email + contraseña (sin SMTP).
   - Arreglado: página en blanco por variables de GitHub con el nombre incluido en el valor. Ahora la app muestra un mensaje en vez de quedar en blanco.
+- **10 oct 2026**: Daily challenges (32 retos de movimiento como 4.º hábito) + sticker book con 32 stickers que se ganan al completar los 4 hábitos de un día.

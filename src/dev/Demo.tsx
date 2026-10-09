@@ -15,7 +15,7 @@ function sampleHabits(): Map<string, HabitLog> {
   const today = todayString();
   for (let i = 1; i < 30; i++) {
     const day = addDays(today, -i);
-    map.set(day, { day, nourish: i % 3 !== 0, move: i % 2 === 0, water: i % 4 !== 1 });
+    map.set(day, { day, nourish: i % 3 !== 0, move: i % 2 === 0, water: i % 4 !== 1, challenge: i % 3 === 2 || i < 4 });
   }
   return map;
 }
@@ -47,7 +47,7 @@ export default function Demo() {
       sync: { state: 'saved', pending: 0 },
       retrySync: () => {},
       setHabit: (day, key, v) =>
-        setHabits((m) => new Map(m).set(day, { ...(m.get(day) ?? { day, nourish: false, move: false, water: false }), [key]: v })),
+        setHabits((m) => new Map(m).set(day, { ...(m.get(day) ?? { day, nourish: false, move: false, water: false, challenge: false }), [key]: v })),
       setNote: (text) => setSettings((s) => ({ ...s, sticky_note: text })),
       createQuest: async (q) => setQuests((qs) => [{ id: id(), ...q, status: 'active', finished_at: null, created_at: '' }, ...qs]),
       updateQuest: async (qid, q) => setQuests((qs) => qs.map((x) => (x.id === qid ? { ...x, ...q } : x))),

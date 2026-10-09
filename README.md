@@ -1,6 +1,6 @@
 # Quest HQ ✦
 
-A cozy personal dashboard, styled like a digital bullet journal: daily habits (Nourish · Move · Water), gentle habit counters, countdowns, a sticky note, an encouraging message, a focus timer and one favorite photo.
+A cozy personal dashboard, styled like a digital bullet journal: daily habits (Nourish · Move · Water · a daily movement challenge), a sticker book, gentle habit counters, countdowns, a sticky note, an encouraging message, a focus timer and one favorite photo.
 
 Built with React + Vite + TypeScript + Tailwind CSS, with Supabase for sign-in, data and private photo storage. It runs as a static site on GitHub Pages and installs to the iPad home screen.
 
@@ -10,7 +10,8 @@ Built with React + Vite + TypeScript + Tailwind CSS, with Supabase for sign-in, 
 
 | | |
 |---|---|
-| **Daily habits** | Three daily check-ins. Use the arrows or the date picker to move between days, including past and future days. Each tap saves automatically. |
+| **Daily habits** | Four daily check-ins — the fourth is a small movement challenge that changes every day (see `src/lib/challenges.ts`). Use the arrows or the date picker to move between days, including past and future days. Each tap saves automatically. |
+| **Sticker book** | Check off all four habits on a day to earn a sticker (with a little pop-up). The book holds 32 hand-drawn stickers, earned in order; after that they repeat with a ×2 badge. Stickers are derived from habit history, nothing extra is stored. |
 | **Little wins** | Completed-day totals per habit, for all time and for the current quest. Future days are excluded. There are no streaks and nothing resets. |
 | **Countdowns** | Add, edit and remove countdowns. A countdown *linked to the quest* follows the active quest's end date, so it updates when you extend the quest. |
 | **Quests** | Optional date ranges (Settings → Quests). You can extend a quest, finish it, start a new one or look back at old ones. Habit records are stored separately from quests, so changing a quest never touches them. |
@@ -128,7 +129,7 @@ scripts/generate-icons.mjs  regenerates the app icons (npm run icons)
 ```
 
 ### Data model
-- `habit_logs (user_id, day, nourish, move, water)`: one row per calendar day. It isn't linked to quests at all.
+- `habit_logs (user_id, day, nourish, move, water, challenge)`: one row per calendar day. It isn't linked to quests at all.
 - `quests (id, name, start_date, end_date, status)`: each user can have at most one `active` quest.
 - `countdowns (id, title, target_date, linked_to_quest, sort_order)`
 - `user_settings (user_id, sticky_note, photo_path)`

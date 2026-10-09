@@ -1,7 +1,11 @@
 import { Check, ChevronLeft, ChevronRight, ListChecks } from 'lucide-react';
 import { useData } from '../data/context';
 import { addDays, diffDays, formatDay, isDayString } from '../lib/dates';
+import { challengeForDay } from '../lib/challenges';
 import { HABITS } from '../lib/habits';
+import { isPerfectDay, perfectDays, stickerIndexForDay } from '../lib/rewards';
+import { HABIT_KEYS, type HabitKey } from '../lib/types';
+import { STICKERS } from './stickers';
 import { Card, CardTitle } from './Card';
 
 function relativeLabel(day: string, today: string): string {
@@ -12,16 +16,42 @@ function relativeLabel(day: string, today: string): string {
   return formatDay(day, { weekday: 'long' });
 }
 
-const CHEERS = ['Fresh page, fresh start ✿', 'One down — lovely start!', 'Two out of three, look at you!', 'All three! What a day ♡'];
+const CHEERS = [
+  'Fresh page, fresh start ✿',
+  'One down — lovely start!',
+  'Two down, look at you!',
+  'Three! One more for a sticker ✨',
+  'All four — sticker earned ♡',
+];
 
-export function HabitTracker({ day, today, onDayChange }: { day: string; today: string; onDayChange: (day: string) => void }) {
+export function HabitTracker({
+  day,
+  today,
+  onDayChange,
+  onSticker,
+}: {
+  day: string;
+  today: string;
+  onDayChange: (day: string) => void;
+  /** Called with the sticker index when a tap completes all four check-ins. */
+  onSticker: (index: number) => void;
+}) {
   const { habits, setHabit } = useData();
   const log = habits.get(day);
-  const done = HABITS.filter((h) => log?.[h.key]).length;
+  const done = HABIT_KEYS.filter((k) => log?.[k]).length;
   const isFuture = day > today;
+  const challenge = challengeForDay(day);
+
+  const toggle = (key: HabitKey, value: boolean) => {
+    setHabit(day, key, value);
+    const next = { day, nourish: false, move: false, water: false, challenge: false, ...log, [key]: value };
+    if (!value || isFuture || isPerfectDay(log) || !isPerfectDay(next)) return;
+    const index = stickerIndexForDay(perfectDays([...habits.values(), next], today), day, STICKERS.length);
+    if (index !== null) onSticker(index);
+  };
 
   return (
-    <Card className="flex flex-col p-4" tape="bg-sage">
+    <Card className="flex min-w-0 flex-col p-4" tape="bg-sage">
       <CardTitle
         icon={ListChecks}
         right={
@@ -64,27 +94,41 @@ export function HabitTracker({ day, today, onDayChange }: { day: string; today: 
         </button>
       </div>
 
-      <ul className="flex flex-1 flex-col gap-2">
+      <ul className="flex flex-1 flex-col gap-1.5">
         {HABITS.map((h) => {
           const checked = Boolean(log?.[h.key]);
           const Icon = h.icon;
+          const isChallenge = h.key === 'challenge';
           return (
             <li key={h.key} className="flex-1">
               <button
                 role="checkbox"
                 aria-checked={checked}
-                onClick={() => setHabit(day, h.key, !checked)}
-                className={`flex h-full min-h-[52px] w-full items-center gap-3 rounded-2xl border-2 px-3 text-left transition active:scale-[0.98] ${
-                  checked ? `${h.soft} ${h.ring}` : 'border-transparent bg-cream hover:bg-white'
+                onClick={() => toggle(h.key, !checked)}
+                className={`flex h-full min-h-[44px] w-full items-center gap-3 rounded-2xl border-2 px-3 text-left transition active:scale-[0.98] ${
+                  checked
+                    ? `${h.soft} ${h.ring}`
+                    : isChallenge
+                      ? 'border-dashed border-butter-mid bg-butter-soft/60 hover:bg-butter-soft'
+                      : 'border-transparent bg-cream hover:bg-white'
                 }`}
               >
                 <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${checked ? 'bg-white/80' : h.soft} ${h.deep}`}>
-                  <Icon className="size-[18px]" strokeWidth={2.4} />
+                  {isChallenge ? <span className="text-lg leading-none">{challenge.emoji}</span> : <Icon className="size-[18px]" strokeWidth={2.4} />}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] leading-tight font-extrabold">{h.label}</span>
-                  <span className="block truncate text-xs font-semibold text-muted">{h.description}</span>
-                </span>
+                {isChallenge ? (
+                  <span className="min-w-0 flex-1">
+                    <span className={`flex items-center gap-1 text-[10px] font-extrabold tracking-[0.1em] uppercase ${h.deep}`}>
+                      <Icon className="size-3" strokeWidth={2.8} /> Daily challenge
+                    </span>
+                    <span className="line-clamp-2 text-[15px] leading-tight font-extrabold">{challenge.text}</span>
+                  </span>
+                ) : (
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] leading-tight font-extrabold">{h.label}</span>
+                    <span className="block truncate text-xs font-semibold text-muted">{h.description}</span>
+                  </span>
+                )}
                 <span
                   className={`grid size-8 shrink-0 place-items-center rounded-full border-2 transition ${
                     checked ? `${h.solid} ${h.ring} text-white` : 'border-line bg-white'
@@ -97,7 +141,7 @@ export function HabitTracker({ day, today, onDayChange }: { day: string; today: 
           );
         })}
       </ul>
-      <p className="mt-2 text-center text-xs font-bold text-muted">
+      <p className="mt-1.5 text-center text-xs font-bold text-muted">
         {isFuture ? 'Planning ahead? You can check things off any day.' : CHEERS[done]}
       </p>
     </Card>

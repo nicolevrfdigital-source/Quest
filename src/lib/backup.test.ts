@@ -6,8 +6,8 @@ const valid = () =>
     JSON.stringify(
       buildBackup({
         habits: [
-          { day: '2026-10-12', nourish: true, move: false, water: true },
-          { day: '2026-10-13', nourish: false, move: false, water: false },
+          { day: '2026-10-12', nourish: true, move: false, water: true, challenge: false },
+          { day: '2026-10-13', nourish: false, move: false, water: false, challenge: false },
         ],
         quests: [
           { id: 'x', name: 'Pre-Trip Quest', start_date: '2026-10-12', end_date: '2026-11-01', status: 'active', finished_at: null, created_at: '' },

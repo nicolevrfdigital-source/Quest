@@ -9,6 +9,7 @@ import { Header } from './Header';
 import { MessageCard } from './MessageCard';
 import { PhotoWidget } from './PhotoWidget';
 import { SettingsPanel, type SettingsTab } from './SettingsPanel';
+import { StickerBook, StickerReward, useStickerCollection } from './StickerBook';
 import { StickyNote } from './StickyNote';
 import { TimerWidget } from './TimerWidget';
 
@@ -26,6 +27,12 @@ export function Dashboard({ email, onSignOut }: { email: string | null; onSignOu
   const [day, setDay] = useState(today);
   const [settings, setSettings] = useState<SettingsTab | null>(null);
   const closeSettings = useCallback(() => setSettings(null), []);
+  const [bookOpen, setBookOpen] = useState(false);
+  const [reward, setReward] = useState<number | null>(null);
+  const closeBook = useCallback(() => setBookOpen(false), []);
+  const closeReward = useCallback(() => setReward(null), []);
+  const { earned } = useStickerCollection(today);
+  const collected = earned.filter((d) => d.length > 0).length;
 
   if (loading) {
     return (
@@ -50,15 +57,20 @@ export function Dashboard({ email, onSignOut }: { email: string | null; onSignOu
 
   return (
     <main className="mx-auto min-h-dvh max-w-[1440px] px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-5 lg:py-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:min-h-[calc(100dvh-2rem)] lg:grid-cols-12 lg:grid-rows-[auto_auto_1fr] lg:gap-3.5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-3 lg:min-h-[calc(100dvh-2rem)] lg:grid-cols-12 lg:grid-rows-[auto_auto_1fr] lg:gap-3.5">
         <div className="order-1 md:col-span-2 lg:order-none lg:col-span-3">
-          <Header today={today} onOpenSettings={() => setSettings('quest')} />
+          <Header
+            today={today}
+            stickers={collected}
+            onOpenSettings={() => setSettings('quest')}
+            onOpenStickers={() => setBookOpen(true)}
+          />
         </div>
         <div className="order-5 min-w-0 md:order-1 md:col-span-2 lg:order-none lg:col-span-9 [&>section]:h-full">
           <Countdowns today={today} onEdit={() => setSettings('countdowns')} />
         </div>
-        <div className="order-2 grid lg:order-none lg:col-span-5">
-          <HabitTracker day={day} today={today} onDayChange={setDay} />
+        <div className="order-2 grid min-w-0 lg:order-none lg:col-span-5">
+          <HabitTracker day={day} today={today} onDayChange={setDay} onSticker={setReward} />
         </div>
         <div className="order-3 grid lg:order-none lg:col-span-4">
           <HabitCounters today={today} />
@@ -76,6 +88,18 @@ export function Dashboard({ email, onSignOut }: { email: string | null; onSignOu
           <PhotoWidget />
         </div>
       </div>
+
+      {bookOpen && <StickerBook today={today} onClose={closeBook} />}
+      {reward !== null && (
+        <StickerReward
+          index={reward}
+          onClose={closeReward}
+          onOpenBook={() => {
+            setReward(null);
+            setBookOpen(true);
+          }}
+        />
+      )}
 
       {settings && (
         <SettingsPanel

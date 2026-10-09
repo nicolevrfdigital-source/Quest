@@ -16,7 +16,7 @@ export function countCompletedDays(
   today: string,
   range?: DayRange,
 ): HabitCounts {
-  const counts: HabitCounts = { nourish: 0, move: 0, water: 0 };
+  const counts: HabitCounts = { nourish: 0, move: 0, water: 0, challenge: 0 };
   const lastDay = range ? minDay(range.end, today) : today;
   const seen = new Set<string>();
 

@@ -37,8 +37,8 @@ export function buildBackup(input: {
     version: 1,
     exported_at: new Date().toISOString(),
     habit_logs: [...input.habits]
-      .filter((h) => h.nourish || h.move || h.water)
-      .map(({ day, nourish, move, water }) => ({ day, nourish, move, water }))
+      .filter((h) => h.nourish || h.move || h.water || h.challenge)
+      .map(({ day, nourish, move, water, challenge }) => ({ day, nourish, move, water, challenge }))
       .sort((a, b) => a.day.localeCompare(b.day)),
     quests: input.quests.map(({ name, start_date, end_date, status, finished_at }) => ({
       name, start_date, end_date, status, finished_at,
@@ -75,7 +75,10 @@ export function parseBackup(input: unknown): ParseResult {
     for (const k of ['nourish', 'move', 'water'] as const) {
       if (typeof h[k] !== 'boolean') return fail(`Habit record ${h.day} has an invalid “${k}” value.`);
     }
-    logs.push({ day: h.day, nourish: h.nourish as boolean, move: h.move as boolean, water: h.water as boolean });
+    // Backups made before daily challenges existed simply have none.
+    const challenge = h.challenge ?? false;
+    if (typeof challenge !== 'boolean') return fail(`Habit record ${h.day} has an invalid “challenge” value.`);
+    logs.push({ day: h.day, nourish: h.nourish as boolean, move: h.move as boolean, water: h.water as boolean, challenge });
   }
 
   const outQuests: BackupQuest[] = [];

@@ -9,7 +9,7 @@ vi.stubGlobal('localStorage', {
   removeItem: (k: string) => void store.delete(k),
 });
 
-const habit = (day: string, nourish: boolean): PendingOp => ({ kind: 'habit', log: { day, nourish, move: false, water: false } });
+const habit = (day: string, nourish: boolean): PendingOp => ({ kind: 'habit', log: { day, nourish, move: false, water: false, challenge: false } });
 
 describe('outbox', () => {
   beforeEach(() => {

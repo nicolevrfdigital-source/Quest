@@ -1,6 +1,6 @@
-export type HabitKey = 'nourish' | 'move' | 'water';
+export type HabitKey = 'nourish' | 'move' | 'water' | 'challenge';
 
-export const HABIT_KEYS: readonly HabitKey[] = ['nourish', 'move', 'water'];
+export const HABIT_KEYS: readonly HabitKey[] = ['nourish', 'move', 'water', 'challenge'];
 
 /** One calendar day of habit check-ins. `day` is a local date string, YYYY-MM-DD. */
 export interface HabitLog {
@@ -8,6 +8,8 @@ export interface HabitLog {
   nourish: boolean;
   move: boolean;
   water: boolean;
+  /** The day's movement challenge (see lib/challenges). */
+  challenge: boolean;
 }
 
 export type QuestStatus = 'active' | 'finished';

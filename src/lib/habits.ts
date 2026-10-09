@@ -1,4 +1,4 @@
-import { Droplet, Footprints, Salad, type LucideIcon } from 'lucide-react';
+import { Droplet, Footprints, Salad, Zap, type LucideIcon } from 'lucide-react';
 import type { HabitKey } from './types';
 
 export interface HabitMeta {
@@ -43,5 +43,16 @@ export const HABITS: readonly HabitMeta[] = [
     solid: 'bg-lavender',
     deep: 'text-lavender-deep',
     ring: 'border-lavender',
+  },
+  {
+    key: 'challenge',
+    label: 'Challenge',
+    // Replaced on screen by the day's challenge (lib/challenges).
+    description: 'A little daily movement nudge',
+    icon: Zap,
+    soft: 'bg-butter-soft',
+    solid: 'bg-butter-mid',
+    deep: 'text-butter-deep',
+    ring: 'border-butter-mid',
   },
 ];

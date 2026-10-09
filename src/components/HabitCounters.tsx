@@ -21,20 +21,20 @@ export function HabitCounters({ today }: { today: string }) {
       <CardTitle icon={Trophy} iconClass="text-peach-deep" sub="days completed">
         Little wins
       </CardTitle>
-      <div className="grid flex-1 grid-cols-3 gap-2">
+      <div className="grid flex-1 grid-cols-4 gap-1.5">
         {HABITS.map((h) => {
           const Icon = h.icon;
           return (
-            <div key={h.key} className={`flex flex-col items-center justify-between rounded-2xl px-1.5 py-3 text-center ${h.soft}`}>
-              <span className={`flex items-center gap-1 text-[13px] font-extrabold ${h.deep}`}>
+            <div key={h.key} className={`flex flex-col items-center justify-between rounded-2xl px-1 py-3 text-center ${h.soft}`}>
+              <span className={`flex items-center gap-1 text-[12px] font-extrabold ${h.deep}`}>
                 <Icon className="size-3.5" strokeWidth={2.6} /> {h.label}
               </span>
               <span className="my-1 flex flex-col">
-                <span className="text-[40px] leading-none font-extrabold tracking-tight">{inQuest ? inQuest[h.key] : total[h.key]}</span>
+                <span className="text-[36px] leading-none font-extrabold tracking-tight">{inQuest ? inQuest[h.key] : total[h.key]}</span>
                 <span className="mt-1 text-[11px] font-bold text-muted">{inQuest ? 'this quest' : 'all time'}</span>
               </span>
               {inQuest && (
-                <span className="rounded-full bg-white/75 px-2 py-0.5 text-[11px] font-bold text-muted">
+                <span className="rounded-full bg-white/75 px-1.5 py-0.5 text-[11px] font-bold text-muted">
                   <span className="text-ink">{total[h.key]}</span> all time
                 </span>
               )}

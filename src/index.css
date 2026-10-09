@@ -25,6 +25,7 @@
 
   --color-butter: #fbe7a1;
   --color-butter-soft: #fff7d6;
+  --color-butter-mid: #f0cd5a;
   --color-butter-deep: #a88520;
 
   --shadow-card: 0 1px 0 rgb(61 56 51 / 0.04), 0 6px 18px -8px rgb(92 74 50 / 0.22);
@@ -136,6 +137,12 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
+  /* Die-cut sticker look: a white border hugging the drawing, plus a soft shadow. */
+  .sticker {
+    overflow: visible;
+    filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff)
+      drop-shadow(1px 1px 0 #fff) drop-shadow(-1px -1px 0 #fff) drop-shadow(0 2px 2.5px rgb(92 74 50 / 0.28));
+  }
   .eyebrow {
     font-size: 0.7rem;
     font-weight: 800;
@@ -158,6 +165,18 @@
   25% { rotate: -6deg; }
   75% { rotate: 6deg; }
 }
+@keyframes sticker-in {
+  0% { opacity: 0; transform: scale(0.3) rotate(-25deg); }
+  55% { opacity: 1; transform: scale(1.12) rotate(6deg); }
+  80% { transform: scale(0.96) rotate(-3deg); }
+  100% { transform: scale(1) rotate(-4deg); }
+}
+@keyframes burst {
+  from { opacity: 1; transform: translate(0, 0) scale(1); }
+  to { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.4); }
+}
+.animate-sticker-in { animation: sticker-in 700ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.animate-burst { animation: burst 900ms ease-out both; }
 .animate-pop { animation: pop 260ms ease-out; }
 .animate-float-in { animation: float-in 300ms ease-out; }
 .animate-wiggle { animation: wiggle 600ms ease-in-out 3; }

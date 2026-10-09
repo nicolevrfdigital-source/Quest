@@ -21,7 +21,7 @@ async function fetchHabits(): Promise<HabitLog[]> {
   const rows: HabitLog[] = [];
   for (let from = 0; ; from += PAGE) {
     const page = check(
-      await supabase.from('habit_logs').select('day, nourish, move, water').order('day').range(from, from + PAGE - 1),
+      await supabase.from('habit_logs').select('day, nourish, move, water, challenge').order('day').range(from, from + PAGE - 1),
     ) as HabitLog[];
     rows.push(...page);
     if (page.length < PAGE) return rows;
@@ -167,7 +167,7 @@ export function DataProvider({ userId, children }: { userId: string; children: R
 
   const setHabit = useCallback(
     (day: string, key: HabitKey, value: boolean) => {
-      const current = habits.get(day) ?? { day, nourish: false, move: false, water: false };
+      const current = habits.get(day) ?? { day, nourish: false, move: false, water: false, challenge: false };
       outbox.enqueue({ kind: 'habit', log: { ...current, [key]: value } });
     },
     [habits, outbox],
