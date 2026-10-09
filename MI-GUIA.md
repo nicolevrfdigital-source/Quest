@@ -128,6 +128,15 @@ y abrir http://localhost:5173/. El archivo `.env.local` (con la URL y la key) es
 
 ---
 
+## 💡 Ideas para después
+
+- **Paquetes de stickers por quest** 🎀: que cada quest tenga su propia colección con tema (ej. *Pre-Trip* → maletas, aviones, playa; invierno → copos, chocolate caliente; primavera → flores, mariposas). El sticker book tendría una página por quest, como un álbum de recuerdos. Los 32 actuales quedan como el paquete “clásico” (para días sin quest activo).
+  - Cómo pedirlo: al empezar un quest nuevo, decirle a Claude el tema y que diseñe el paquete.
+  - Lo que implica: una mini migración en Supabase (que el quest guarde qué paquete usa; ejecutarla en el **SQL Editor** antes de publicar), elegir el paquete en Settings y pestañas en el sticker book.
+- **Más stickers clásicos**: se pueden añadir cuando quiera al final de `src/components/stickers.tsx`; los que ya gané no se mueven.
+
+---
+
 ## 🗓️ Historial
 
 - **9 oct 2026**: proyecto creado, base de datos configurada, cuenta creada, publicado en GitHub Pages e instalado en el iPad.
