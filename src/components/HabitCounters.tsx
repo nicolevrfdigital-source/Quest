@@ -8,12 +8,14 @@ import { Card, CardTitle } from './Card';
 export function HabitCounters({ today }: { today: string }) {
   const { habits, activeQuest } = useData();
   const total = useMemo(() => countCompletedDays(habits.values(), today), [habits, today]);
+  // Until the quest has started there's nothing to count in it yet, so show all-time totals.
+  const quest = activeQuest && activeQuest.start_date <= today ? activeQuest : null;
   const inQuest = useMemo(
     () =>
-      activeQuest
-        ? countCompletedDays(habits.values(), today, { start: activeQuest.start_date, end: activeQuest.end_date })
+      quest
+        ? countCompletedDays(habits.values(), today, { start: quest.start_date, end: quest.end_date })
         : null,
-    [habits, today, activeQuest],
+    [habits, today, quest],
   );
 
   return (
