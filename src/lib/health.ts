@@ -77,8 +77,12 @@ export function burnedStars(kcal: number | undefined): Stars | null {
   return 0;
 }
 
+/** Under 1,000 kcal most likely means meals weren't all logged, so it only earns one star. */
+export const INCOMPLETE_FOOD_LOG = 1_000;
+
 export function consumedStars(kcal: number | undefined): Stars | null {
   if (kcal === undefined) return null;
+  if (kcal < INCOMPLETE_FOOD_LOG) return 1;
   if (kcal <= 1_400) return 3;
   if (kcal <= 1_600) return 2;
   return 1;

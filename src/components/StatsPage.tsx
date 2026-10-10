@@ -4,6 +4,7 @@ import { useData } from '../data/context';
 import { addDays, diffDays, formatDay, formatShort, isDayString, minDay } from '../lib/dates';
 import {
   MANUAL,
+  INCOMPLETE_FOOD_LOG,
   MAX_DAY_STARS,
   buildHealthByDay,
   burnedStars,
@@ -275,6 +276,7 @@ function DayCard({
           display={(v) => fmt(v)}
           unit="kcal"
           stars={consumedStars(health?.consumed)}
+          note={health?.consumed !== undefined && health.consumed < INCOMPLETE_FOOD_LOG ? 'All meals logged?' : undefined}
           manual={manual('calories_consumed')}
         />
         <MetricTile
@@ -450,7 +452,10 @@ function MetricTile({
         {value !== undefined && <span className="text-xs font-bold text-muted">{unit}</span>}
       </span>
       {stars !== undefined ? (
-        <StarRow count={stars} className="size-5" />
+        <span className="flex items-center justify-between gap-1">
+          <StarRow count={stars} className="size-5" />
+          {note && <span className="truncate text-[11px] font-bold text-muted">{note}</span>}
+        </span>
       ) : (
         <span className="text-[11px] font-bold text-muted">{note ?? (value === undefined ? 'Tap to add' : ' ')}</span>
       )}

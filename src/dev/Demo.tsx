@@ -29,7 +29,7 @@ function sampleHealth(): DailyHealthRow[] {
     rows.push({ day, kind: 'steps', origin: 'health_connect', value: Math.round((i === 0 ? 4200 : 8200) + wave * 3200) });
     rows.push({ day, kind: 'calories_burned', origin: 'com.fitbit.FitbitMobile', value: Math.round(1850 + wave * 260) });
     rows.push({ day, kind: 'calories_burned', origin: 'com.google.android.apps.fitness', value: Math.round(1500 + wave * 200) });
-    if (i > 0) rows.push({ day, kind: 'calories_consumed', origin: 'com.cronometer.android.gold', value: Math.round(1480 + Math.cos(i * 1.3) * 220) });
+    if (i > 0) rows.push({ day, kind: 'calories_consumed', origin: 'com.cronometer.android.gold', value: i === 1 ? 820 : Math.round(1480 + Math.cos(i * 1.3) * 220) });
     if (i % 3 === 0) rows.push({ day, kind: 'weight', origin: 'com.fitbit.FitbitMobile', value: 68 + i * 0.06 });
   }
   return rows;

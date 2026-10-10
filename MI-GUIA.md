@@ -142,7 +142,7 @@ y abrir http://localhost:5173/. El archivo `.env.local` (con la URL y la key) es
 |---|---|---|---|---|
 | **Pasos** | 10,000+ | 7,000+ | menos de 7,000 | — |
 | **Quemadas** | 2,000+ kcal | 1,700+ | 1,500+ | menos de 1,500 |
-| **Comidas** | hasta 1,400 kcal | hasta 1,600 | más de 1,600 | — |
+| **Comidas** | 1,000–1,400 kcal | hasta 1,600 | más de 1,600, o menos de 1,000 (probablemente faltó registrar algo) | — |
 
 Si no hay datos de algo ese día, no suma estrellas (se ve “—”). El peso no da estrellas, solo se sigue. Los números se cambian en `src/lib/health.ts`.
 

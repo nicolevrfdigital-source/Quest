@@ -14,6 +14,9 @@ describe('stars', () => {
   it('scores calories consumed', () => {
     expect([consumedStars(1200), consumedStars(1400), consumedStars(1600), consumedStars(1601), consumedStars(undefined)]).toEqual([3, 3, 2, 1, null]);
   });
+  it('gives one star to a food log that looks incomplete', () => {
+    expect([consumedStars(400), consumedStars(999), consumedStars(1000)]).toEqual([1, 1, 3]);
+  });
   it('adds up a day, treating missing data as no stars', () => {
     expect(dayStars({ steps: 10500, burned: 1750 }).total).toBe(5);
     expect(dayStars(undefined).total).toBe(0);
