@@ -135,7 +135,7 @@ y abrir http://localhost:5173/. El archivo `.env.local` (con la URL y la key) es
 ### Qué muestra
 - **My day**: pasos, calorías quemadas, calorías comidas y peso (en lb) del día, con estrellas, más el ánimo.
 - **Looking at**: elijo un quest (empezado o terminado), *Last 7 days* o *Last 30 days*. Muestra el promedio de estrellas por día, los pasos totales, el cambio de peso y el ánimo más frecuente.
-- **Star days**: calendario del rango con las estrellas y la carita de cada día. Tocando un día, *My day* muestra ese día.
+- **Star days**: calendario del **mes completo** con las estrellas y la carita de cada día; con ‹ › veo meses anteriores. Los promedios de abajo son de ese mes. Tocando un día, *My day* muestra ese día.
 
 ### Las estrellas (máximo 9 por día)
 | | ★★★ | ★★ | ★ | sin estrellas |

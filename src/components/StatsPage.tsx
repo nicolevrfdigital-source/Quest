@@ -29,7 +29,6 @@ interface Range {
 }
 
 const fmt = (n: number, digits = 0) => n.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits });
-const MAX_CALENDAR_DAYS = 42;
 
 function useRanges(today: string): Range[] {
   const { quests } = useData();
@@ -70,7 +69,7 @@ export function StatsPage({ today, header }: { today: string; header: ReactNode 
         <DayCard day={day} today={today} onDayChange={setDay} health={byDay.get(day)} byDay={byDay} mood={moods.get(day)} />
       </div>
       <div className="grid min-w-0 lg:col-span-7">
-        <CalendarCard range={range} today={today} byDay={byDay} moods={moods} selected={day} onSelect={setDay} summary={summary} />
+        <CalendarCard today={today} byDay={byDay} moods={moods} selected={day} onSelect={setDay} />
       </div>
     </div>
   );
@@ -471,31 +470,38 @@ function scoreTone(total: number | null): string {
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
+const monthStart = (day: string) => `${day.slice(0, 7)}-01`;
+/** First day of the month `n` months after the one `start` is in. */
+function shiftMonth(start: string, n: number): string {
+  const d = new Date(Date.UTC(Number(start.slice(0, 4)), Number(start.slice(5, 7)) - 1 + n, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
+}
+
+/** A whole calendar month; the arrows page back through earlier months. */
 function CalendarCard({
-  range,
   today,
   byDay,
   moods,
   selected,
   onSelect,
-  summary,
 }: {
-  range: Range;
   today: string;
   byDay: Map<string, DayHealth>;
   moods: Map<string, Mood>;
   selected: string;
   onSelect: (d: string) => void;
-  summary: ReturnType<typeof summarizeRange>;
 }) {
-  // The whole range (future days of a quest included), capped to the last six weeks.
+  const [month, setMonth] = useState(() => monthStart(selected));
+  // Follow the day picked in "My day" into its month.
+  useEffect(() => setMonth(monthStart(selected)), [selected]);
+
   const days = useMemo(() => {
     const out: string[] = [];
-    for (let d = range.start; d <= range.end; d = addDays(d, 1)) out.push(d);
-    if (out.length <= MAX_CALENDAR_DAYS) return out;
-    const lastIndex = Math.max(out.indexOf(minDay(range.end, today)), MAX_CALENDAR_DAYS - 1);
-    return out.slice(lastIndex - MAX_CALENDAR_DAYS + 1, lastIndex + 1);
-  }, [range, today]);
+    for (let d = month; d.slice(0, 7) === month.slice(0, 7); d = addDays(d, 1)) out.push(d);
+    return out;
+  }, [month]);
+  const summary = useMemo(() => summarizeRange(days[0], days.at(-1)!, today, byDay, moods), [days, today, byDay, moods]);
+  const isCurrentMonth = month === monthStart(today);
   // Monday-first offset so the grid lines up under the weekday letters.
   const lead = (new Date(`${days[0]}T12:00:00`).getDay() + 6) % 7;
   const rows = Math.ceil((lead + days.length) / 7);
@@ -504,7 +510,29 @@ function CalendarCard({
 
   return (
     <Card className="flex min-w-0 flex-col p-4" tape="bg-sage">
-      <CardTitle icon={Sparkles} sub={range.isQuest ? 'this quest, day by day' : 'day by day'}>
+      <CardTitle
+        icon={Sparkles}
+        sub={formatDay(month, { month: 'long', year: 'numeric' })}
+        right={
+          <span className="flex gap-1">
+            <button
+              onClick={() => setMonth((m) => shiftMonth(m, -1))}
+              className="grid size-9 place-items-center rounded-full bg-cream transition hover:bg-sage-soft active:scale-95"
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <button
+              onClick={() => setMonth((m) => shiftMonth(m, 1))}
+              disabled={isCurrentMonth}
+              className="grid size-9 place-items-center rounded-full bg-cream transition hover:bg-sage-soft active:scale-95 disabled:opacity-40"
+              aria-label="Next month"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </span>
+        }
+      >
         Star days
       </CardTitle>
 
@@ -559,7 +587,7 @@ function CalendarCard({
         <div className="flex flex-col items-center justify-center rounded-2xl bg-lavender-soft px-2 py-1.5">
           <WeightSparkline weights={weights} />
           <span className="text-[11px] font-bold text-muted">
-            {weights.length ? `${fmt(kgToLb(weights.at(-1)!), 1)} lb now` : 'weight'}
+            {weights.length ? `${fmt(kgToLb(weights.at(-1)!), 1)} lb ${isCurrentMonth ? 'now' : 'at month end'}` : 'weight'}
           </span>
         </div>
       </div>
