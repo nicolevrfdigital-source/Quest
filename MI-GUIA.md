@@ -165,9 +165,12 @@ Los datos llegan cada vez que la app del teléfono sincroniza, no al instante. S
 
 ## 💡 Ideas para después
 
-- **Paquetes de stickers por quest** 🎀: que cada quest tenga su propia colección con tema (ej. *Pre-Trip* → maletas, aviones, playa; invierno → copos, chocolate caliente; primavera → flores, mariposas). El sticker book tendría una página por quest, como un álbum de recuerdos. Los 32 actuales quedan como el paquete “clásico” (para días sin quest activo).
+- **Paquetes de stickers por quest o por temporada** 🎀: que cada quest (o temporada) tenga su propia colección con tema (ej. *Pre-Trip* → maletas, aviones, playa; invierno → copos, chocolate caliente; primavera → flores, mariposas). El sticker book tendría una página por quest, como un álbum de recuerdos. Los 32 actuales quedan como el paquete “clásico” (para días sin quest activo).
   - Cómo pedirlo: al empezar un quest nuevo, decirle a Claude el tema y que diseñe el paquete.
   - Lo que implica: una mini migración en Supabase (que el quest guarde qué paquete usa; ejecutarla en el **SQL Editor** antes de publicar), elegir el paquete en Settings y pestañas en el sticker book.
+- **Agregar o quitar hábitos** ✅: poder editar mis hábitos desde Settings, con un **máximo de 6** (número par, para que *Daily habits* y *Little wins* se acomoden en 2×3 o 3×2 cuando haga falta espacio).
+  - Lo que implica: pasar los hábitos fijos (Nourish, Move, Water, Challenge) a una lista editable sin perder el historial, con otra migración en Supabase. Quitar un hábito lo archivaría, no borraría sus días.
+  - Falta decidir: si el *Daily challenge* queda siempre fijo, y si el sticker se gana completando **todos** los hábitos activos del día.
 - **Más stickers clásicos**: se pueden añadir cuando quiera al final de `src/components/stickers.tsx`; los que ya gané no se mueven.
 
 ---
