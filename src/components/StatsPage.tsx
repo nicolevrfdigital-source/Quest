@@ -1,4 +1,4 @@
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Footprints, Flame, Pencil, Scale, Sparkles, Utensils, X, type LucideIcon } from 'lucide-react';
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Flag, Footprints, Flame, Pencil, Scale, Sparkles, Trophy, Utensils, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useData } from '../data/context';
 import { addDays, diffDays, formatDay, formatShort, isDayString, minDay } from '../lib/dates';
@@ -507,6 +507,20 @@ function CalendarCard({
   }, [month]);
   const summary = useMemo(() => summarizeRange(days[0], days.at(-1)!, today, byDay, moods), [days, today, byDay, moods]);
   const isCurrentMonth = month === monthStart(today);
+
+  // Which quests start or end on each day, for the little flag and trophy.
+  const { quests } = useData();
+  // Paging forward stops at this month, or at the month the last quest ends in.
+  const lastMonth = quests.reduce((m, q) => (monthStart(q.end_date) > m ? monthStart(q.end_date) : m), monthStart(today));
+  const questMarks = useMemo(() => {
+    const marks = new Map<string, { starts: string[]; ends: string[] }>();
+    const at = (d: string) => marks.get(d) ?? (marks.set(d, { starts: [], ends: [] }), marks.get(d)!);
+    for (const q of quests) {
+      at(q.start_date).starts.push(q.name);
+      at(q.end_date).ends.push(q.name);
+    }
+    return marks;
+  }, [quests]);
   // Monday-first offset so the grid lines up under the weekday letters.
   const lead = (new Date(`${days[0]}T12:00:00`).getDay() + 6) % 7;
   const rows = Math.ceil((lead + days.length) / 7);
@@ -529,7 +543,7 @@ function CalendarCard({
             </button>
             <button
               onClick={() => setMonth((m) => shiftMonth(m, 1))}
-              disabled={isCurrentMonth}
+              disabled={month >= lastMonth}
               className="grid size-9 place-items-center rounded-full bg-cream transition hover:bg-sage-soft active:scale-95 disabled:opacity-40"
               aria-label="Next month"
             >
@@ -559,12 +573,17 @@ function CalendarCard({
           const future = d > today;
           const total = hasScore(h) ? dayStars(h).total : null;
           const mood = moods.get(d);
+          const mark = questMarks.get(d);
+          const markText = mark
+            ? [...mark.starts.map((n) => `${n} starts`), ...mark.ends.map((n) => `${n} ends`)].join(', ')
+            : '';
           return (
             <button
               key={d}
               disabled={future}
               onClick={() => onSelect(d)}
-              aria-label={`${formatShort(d)}: ${total === null ? 'no data' : `${total} stars`}${mood ? `, ${MOODS[mood - 1].label}` : ''}`}
+              aria-label={`${formatShort(d)}: ${total === null ? 'no data' : `${total} stars`}${mood ? `, ${MOODS[mood - 1].label}` : ''}${markText ? `, ${markText}` : ''}`}
+              title={markText || undefined}
               aria-pressed={d === selected}
               className={`relative flex flex-col justify-between rounded-xl p-1.5 text-left transition active:scale-95 ${
                 future ? 'border-2 border-dashed border-line bg-transparent' : scoreTone(total)
@@ -574,6 +593,20 @@ function CalendarCard({
                 {Number(d.slice(8))}
               </span>
               {mood && <MoodFace mood={mood} className="absolute top-1 right-1 size-[clamp(14px,28%,24px)]" />}
+              {mark && (
+                <span aria-hidden className="absolute bottom-1 left-1 flex gap-0.5">
+                  {mark.starts.length > 0 && (
+                    <span className="grid size-6 place-items-center rounded-full bg-white text-sage-deep shadow-card ring-1 ring-sage">
+                      <Flag className="size-3.5" fill="currentColor" strokeWidth={2.4} />
+                    </span>
+                  )}
+                  {mark.ends.length > 0 && (
+                    <span className="grid size-6 place-items-center rounded-full bg-white text-butter-deep shadow-card ring-1 ring-butter-mid">
+                      <Trophy className="size-3.5" fill="var(--color-butter)" strokeWidth={2.4} />
+                    </span>
+                  )}
+                </span>
+              )}
               {total !== null && (
                 <span className="self-end text-[12px] leading-none font-extrabold">
                   {total}
