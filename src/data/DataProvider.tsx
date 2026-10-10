@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { PHOTO_BUCKET, supabase } from '../lib/supabase';
 import { Outbox, type PendingOp, type SyncStatus } from '../lib/outbox';
-import type { Countdown, HabitKey, HabitLog, Quest, Settings } from '../lib/types';
+import type { Countdown, DailyHealthRow, HabitKey, HabitLog, HealthKind, HealthSources, Mood, Quest, Settings } from '../lib/types';
+import { MANUAL } from '../lib/health';
 import { INITIAL_COUNTDOWNS, INITIAL_QUEST } from '../lib/initial';
 import { resizeImage } from '../lib/image';
 import { buildBackup, type BackupFile } from '../lib/backup';
 import { DataContext, type DataContextValue, type QuestInput, type CountdownInput } from './context';
 
-type Table = 'habits' | 'quests' | 'countdowns' | 'settings';
+type Table = 'habits' | 'quests' | 'countdowns' | 'settings' | 'health' | 'moods' | 'token';
 
-const EMPTY_SETTINGS: Settings = { sticky_note: '', photo_path: null };
+const ALL_TABLES: Table[] = ['habits', 'quests', 'countdowns', 'settings', 'health', 'moods', 'token'];
+
+type TokenInfo = { created_at: string; last_used_at: string | null };
+
+const EMPTY_SETTINGS: Settings = { sticky_note: '', photo_path: null, health_sources: {} };
 const PAGE = 1000;
 
 function check<T>(res: { data: T; error: { message: string } | null }): T {
@@ -28,6 +33,33 @@ async function fetchHabits(): Promise<HabitLog[]> {
   }
 }
 
+async function fetchHealth(): Promise<DailyHealthRow[]> {
+  const rows: DailyHealthRow[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const page = check(
+      await supabase.from('daily_health').select('day, kind, origin, value').order('day').order('kind').order('origin').range(from, from + PAGE - 1),
+    ) as DailyHealthRow[];
+    rows.push(...page);
+    if (page.length < PAGE) return rows;
+  }
+}
+
+async function fetchMoods(): Promise<Map<string, Mood>> {
+  const map = new Map<string, Mood>();
+  for (let from = 0; ; from += PAGE) {
+    const page = check(await supabase.from('moods').select('day, mood').order('day').range(from, from + PAGE - 1)) as {
+      day: string;
+      mood: Mood;
+    }[];
+    for (const m of page) map.set(m.day, m.mood);
+    if (page.length < PAGE) return map;
+  }
+}
+
+async function fetchToken(): Promise<TokenInfo | null> {
+  return check(await supabase.from('health_ingest_tokens').select('created_at, last_used_at').maybeSingle()) as TokenInfo | null;
+}
+
 async function fetchQuests(): Promise<Quest[]> {
   return check(await supabase.from('quests').select('*').order('start_date', { ascending: false })) as Quest[];
 }
@@ -39,8 +71,8 @@ async function fetchCountdowns(): Promise<Countdown[]> {
 }
 
 async function fetchSettings(): Promise<Settings> {
-  const row = check(await supabase.from('user_settings').select('sticky_note, photo_path').maybeSingle()) as Settings | null;
-  return row ?? EMPTY_SETTINGS;
+  const row = check(await supabase.from('user_settings').select('sticky_note, photo_path, health_sources').maybeSingle()) as Settings | null;
+  return row ? { ...row, health_sources: row.health_sources ?? {} } : EMPTY_SETTINGS;
 }
 
 /** Seeds the starter quest and countdowns exactly once per account. */
@@ -72,6 +104,9 @@ export function DataProvider({ userId, children }: { userId: string; children: R
   const [quests, setQuests] = useState<Quest[]>([]);
   const [countdowns, setCountdowns] = useState<Countdown[]>([]);
   const [settings, setSettings] = useState<Settings>(EMPTY_SETTINGS);
+  const [health, setHealth] = useState<DailyHealthRow[]>([]);
+  const [serverMoods, setServerMoods] = useState<Map<string, Mood>>(new Map());
+  const [healthToken, setHealthToken] = useState<TokenInfo | null>(null);
   const [sync, setSync] = useState<SyncStatus>({ state: 'idle', pending: 0 });
   // Bumped whenever the outbox changes so pending edits re-overlay server data.
   const [outboxVersion, setOutboxVersion] = useState(0);
@@ -80,6 +115,9 @@ export function DataProvider({ userId, children }: { userId: string; children: R
     const send = async (op: PendingOp) => {
       if (op.kind === 'habit') {
         check(await supabase.from('habit_logs').upsert({ user_id: userId, ...op.log }, { onConflict: 'user_id,day' }));
+      } else if (op.kind === 'mood') {
+        if (op.mood === null) check(await supabase.from('moods').delete().eq('day', op.day));
+        else check(await supabase.from('moods').upsert({ user_id: userId, day: op.day, mood: op.mood }, { onConflict: 'user_id,day' }));
       } else {
         check(await supabase.from('user_settings').upsert({ user_id: userId, sticky_note: op.text }, { onConflict: 'user_id' }));
       }
@@ -98,6 +136,9 @@ export function DataProvider({ userId, children }: { userId: string; children: R
     if (tables.includes('quests')) jobs.push(fetchQuests().then(setQuests));
     if (tables.includes('countdowns')) jobs.push(fetchCountdowns().then(setCountdowns));
     if (tables.includes('settings')) jobs.push(fetchSettings().then(setSettings));
+    if (tables.includes('health')) jobs.push(fetchHealth().then(setHealth));
+    if (tables.includes('moods')) jobs.push(fetchMoods().then(setServerMoods));
+    if (tables.includes('token')) jobs.push(fetchToken().then(setHealthToken));
     await Promise.all(jobs);
   }, []);
 
@@ -105,7 +146,7 @@ export function DataProvider({ userId, children }: { userId: string; children: R
     setLoadError(null);
     try {
       await ensureInitialData(userId);
-      await refetch(['habits', 'quests', 'countdowns', 'settings']);
+      await refetch(ALL_TABLES);
       setLoading(false);
       void outbox.flush();
     } catch (err) {
@@ -132,12 +173,17 @@ export function DataProvider({ userId, children }: { userId: string; children: R
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quests', filter }, () => schedule('quests'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'countdowns', filter }, () => schedule('countdowns'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'user_settings', filter }, () => schedule('settings'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_health', filter }, () => {
+        schedule('health');
+        schedule('token');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'moods', filter }, () => schedule('moods'))
       .subscribe();
 
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
       void outbox.flush();
-      void refetch(['habits', 'quests', 'countdowns', 'settings']).catch(() => {});
+      void refetch(ALL_TABLES).catch(() => {});
     };
     const onOnline = () => void outbox.flush();
     document.addEventListener('visibilitychange', onVisible);
@@ -163,6 +209,16 @@ export function DataProvider({ userId, children }: { userId: string; children: R
     return op?.kind === 'note' ? op.text : null;
   }, [outbox, outboxVersion]);
 
+  const moods = useMemo(() => {
+    const map = new Map(serverMoods);
+    for (const op of outbox.pending()) {
+      if (op.kind !== 'mood') continue;
+      if (op.mood === null) map.delete(op.day);
+      else map.set(op.day, op.mood);
+    }
+    return map;
+  }, [serverMoods, outbox, outboxVersion]);
+
   const activeQuest = useMemo(() => quests.find((q) => q.status === 'active') ?? null, [quests]);
 
   const setHabit = useCallback(
@@ -174,6 +230,7 @@ export function DataProvider({ userId, children }: { userId: string; children: R
   );
 
   const setNote = useCallback((text: string) => outbox.enqueue({ kind: 'note', text }), [outbox]);
+  const setMood = useCallback((day: string, mood: Mood | null) => outbox.enqueue({ kind: 'mood', day, mood }), [outbox]);
 
   // Explicit actions throw a friendly error so the calling form can show it.
   const run = useCallback(
@@ -194,6 +251,8 @@ export function DataProvider({ userId, children }: { userId: string; children: R
     loadError,
     reload: loadAll,
     habits,
+    health,
+    moods,
     quests,
     activeQuest,
     countdowns,
@@ -204,6 +263,31 @@ export function DataProvider({ userId, children }: { userId: string; children: R
     retrySync: () => void outbox.flush(),
     setHabit,
     setNote,
+    setMood,
+    healthToken,
+
+    setManualHealth: (day: string, kind: HealthKind, value: number | null) =>
+      run(['health'], async () => {
+        if (value === null) check(await supabase.from('daily_health').delete().match({ day, kind, origin: MANUAL }));
+        else
+          check(
+            await supabase
+              .from('daily_health')
+              .upsert({ user_id: userId, day, kind, origin: MANUAL, value }, { onConflict: 'user_id,day,kind,origin' }),
+          );
+      }),
+    setHealthSources: (sources: HealthSources) =>
+      run(['settings'], async () =>
+        check(await supabase.from('user_settings').upsert({ user_id: userId, health_sources: sources }, { onConflict: 'user_id' })),
+      ),
+    createHealthToken: async () => {
+      let token = '';
+      await run(['token'], async () => {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        token = check(await supabase.rpc('create_health_token', { tz })) as string;
+      });
+      return token;
+    },
 
     createQuest: (q: QuestInput) =>
       run(['quests'], async () => check(await supabase.from('quests').insert({ ...q, user_id: userId, status: 'active' }))),
@@ -242,11 +326,11 @@ export function DataProvider({ userId, children }: { userId: string; children: R
       }),
 
     exportData: (): BackupFile =>
-      buildBackup({ habits: habits.values(), quests, countdowns, stickyNote: pendingNote ?? settings.sticky_note }),
+      buildBackup({ habits: habits.values(), quests, countdowns, moods, stickyNote: pendingNote ?? settings.sticky_note }),
     importData: async (data: BackupFile) => {
       // Pending local edits would otherwise be replayed on top of the imported data.
       outbox.clear();
-      await run(['habits', 'quests', 'countdowns', 'settings'], async () =>
+      await run(ALL_TABLES, async () =>
         check(await supabase.rpc('import_backup', { payload: data })),
       );
     },

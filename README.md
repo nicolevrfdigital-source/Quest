@@ -1,6 +1,6 @@
 # Quest HQ ✦
 
-A cozy personal dashboard, styled like a digital bullet journal: daily habits (Nourish · Move · Water · a daily movement challenge), a sticker book, gentle habit counters, countdowns, a sticky note, an encouraging message, a focus timer and one favorite photo.
+A cozy personal dashboard, styled like a digital bullet journal: daily habits (Nourish · Move · Water · a daily movement challenge), a sticker book, a stats screen (steps, calories, weight and mood from the phone, scored with stars), gentle habit counters, countdowns, a sticky note, an encouraging message, a focus timer and one favorite photo.
 
 Built with React + Vite + TypeScript + Tailwind CSS, with Supabase for sign-in, data and private photo storage. It runs as a static site on GitHub Pages and installs to the iPad home screen.
 
@@ -12,6 +12,7 @@ Built with React + Vite + TypeScript + Tailwind CSS, with Supabase for sign-in, 
 |---|---|
 | **Daily habits** | Four daily check-ins — the fourth is a small movement challenge that changes every day (see `src/lib/challenges.ts`). Use the arrows or the date picker to move between days, including past and future days. Each tap saves automatically. |
 | **Sticker book** | Check off all four habits on a day to earn a sticker (with a little pop-up). The book holds 32 hand-drawn stickers, earned in order; after that they repeat with a ×2 badge. Stickers are derived from habit history, nothing extra is stored. |
+| **Stats** | A second screen (switch with **Today / Stats** in the header). Steps, calories burned, calories eaten and weight per day, each scored with up to 3 stars (rules in `src/lib/health.ts`), plus a daily mood. Shows a summary and a star calendar for any quest or the last 7/30 days. Any number can be typed in by hand. |
 | **Little wins** | Completed-day totals per habit, for all time and for the current quest. Future days are excluded. There are no streaks and nothing resets. |
 | **Countdowns** | Add, edit and remove countdowns. A countdown *linked to the quest* follows the active quest's end date, so it updates when you extend the quest. |
 | **Quests** | Optional date ranges (Settings → Quests). You can extend a quest, finish it, start a new one or look back at old ones. Habit records are stored separately from quests, so changing a quest never touches them. |
@@ -25,6 +26,7 @@ Built with React + Vite + TypeScript + Tailwind CSS, with Supabase for sign-in, 
 ### How saving works
 - Supabase is the source of truth. Data loads when you sign in, and Supabase Realtime pushes changes to your other devices. The app also refreshes whenever it comes back to the foreground.
 - Habit check-ins and the sticky note go through a small **outbox**. Every edit is kept in the device's local storage until Supabase confirms it, and failed saves retry automatically with backoff. If the network drops you see an "unsaved · retrying" pill, and nothing is silently lost, even if you close the app.
+- Health numbers come from an Android phone: Health Connect → the **HC Webhook** app → `POST /rest/v1/rpc/ingest_health` with headers `apikey` (publishable key) and `x-quest-token` (a per-user secret made in Settings → Health; only its SHA-256 is stored). The function assigns records to local days, replaces re-sent records instead of double counting, and keeps one value per day and source app in `daily_health`. The app then picks one value per day (typed > chosen source > highest).
 - Saves for quests, countdowns, the photo and imports happen when you press their buttons. If one fails, the error shows right on that form.
 
 ---
@@ -130,6 +132,8 @@ scripts/generate-icons.mjs  regenerates the app icons (npm run icons)
 
 ### Data model
 - `habit_logs (user_id, day, nourish, move, water, challenge)`: one row per calendar day. It isn't linked to quests at all.
+- `daily_health (user_id, day, kind, origin, value)`: one value per day, kind (`steps`, `calories_burned`, `calories_consumed`, `weight` in kg) and source app; `origin = 'manual'` is typed in the app. `health_samples` holds the raw records behind the sums.
+- `moods (user_id, day, mood 1–5)`, and `health_ingest_tokens` for the phone's secret.
 - `quests (id, name, start_date, end_date, status)`: each user can have at most one `active` quest.
 - `countdowns (id, title, target_date, linked_to_quest, sort_order)`
 - `user_settings (user_id, sticky_note, photo_path)`

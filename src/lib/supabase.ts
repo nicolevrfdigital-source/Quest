@@ -26,3 +26,9 @@ export const supabase: SupabaseClient = createClient(isConfigured ? url! : 'http
 export function appUrl(): string {
   return new URL(import.meta.env.BASE_URL, window.location.href).href;
 }
+
+/** What the phone's HC Webhook app needs to deliver Health Connect data (see Settings → Health). */
+export const healthWebhook = {
+  url: isConfigured ? `${url!.replace(/\/+$/, '')}/rest/v1/rpc/ingest_health` : '',
+  apikey: key ?? '',
+};

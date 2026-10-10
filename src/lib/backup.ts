@@ -1,5 +1,5 @@
 import { isDayString } from './dates';
-import type { Countdown, HabitLog, Quest } from './types';
+import type { Countdown, HabitLog, Mood, Quest } from './types';
 
 export interface BackupQuest {
   name: string;
@@ -23,6 +23,8 @@ export interface BackupFile {
   habit_logs: HabitLog[];
   quests: BackupQuest[];
   countdowns: BackupCountdown[];
+  /** Added with mood tracking; older backups don't have it. */
+  moods: { day: string; mood: Mood }[];
   sticky_note: string;
 }
 
@@ -30,6 +32,7 @@ export function buildBackup(input: {
   habits: Iterable<HabitLog>;
   quests: Quest[];
   countdowns: Countdown[];
+  moods?: Map<string, Mood>;
   stickyNote: string;
 }): BackupFile {
   return {
@@ -46,6 +49,7 @@ export function buildBackup(input: {
     countdowns: input.countdowns.map(({ title, target_date, linked_to_quest, sort_order }) => ({
       title, target_date, linked_to_quest, sort_order,
     })),
+    moods: [...(input.moods ?? [])].map(([day, mood]) => ({ day, mood })).sort((a, b) => a.day.localeCompare(b.day)),
     sticky_note: input.stickyNote,
   };
 }
@@ -110,6 +114,15 @@ export function parseBackup(input: unknown): ParseResult {
     outCountdowns.push({ title: c.title, target_date: target, linked_to_quest: c.linked_to_quest, sort_order: sort });
   }
 
+  const outMoods: { day: string; mood: Mood }[] = [];
+  const moodDays = new Set<string>();
+  for (const [i, m] of (Array.isArray(input.moods) ? input.moods : []).entries()) {
+    if (!isObj(m) || !isDayString(m.day) || moodDays.has(m.day)) return fail(`Mood #${i + 1} has an invalid or repeated date.`);
+    if (typeof m.mood !== 'number' || !Number.isInteger(m.mood) || m.mood < 1 || m.mood > 5) return fail(`Mood #${i + 1} is invalid.`);
+    moodDays.add(m.day);
+    outMoods.push({ day: m.day, mood: m.mood as Mood });
+  }
+
   return {
     ok: true,
     data: {
@@ -119,6 +132,7 @@ export function parseBackup(input: unknown): ParseResult {
       habit_logs: logs,
       quests: outQuests,
       countdowns: outCountdowns,
+      moods: outMoods,
       sticky_note,
     },
   };

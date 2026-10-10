@@ -5,10 +5,11 @@ import { useToday } from '../hooks/useToday';
 import { Countdowns } from './Countdowns';
 import { HabitCounters } from './HabitCounters';
 import { HabitTracker } from './HabitTracker';
-import { Header } from './Header';
+import { Header, type Page } from './Header';
 import { MessageCard } from './MessageCard';
 import { PhotoWidget } from './PhotoWidget';
 import { SettingsPanel, type SettingsTab } from './SettingsPanel';
+import { StatsPage } from './StatsPage';
 import { StickerBook, StickerReward, useStickerCollection } from './StickerBook';
 import { StickyNote } from './StickyNote';
 import { TimerWidget } from './TimerWidget';
@@ -20,7 +21,18 @@ import { TimerWidget } from './TimerWidget';
  *  - iPad landscape (lg): a 12-column grid that fills the screen —
  *      header + countdowns / habits · counters · message / note · timer · photo.
  *    Rows stretch to fill the viewport but grow (and the page scrolls) rather than clip.
+ *  The header switches between this screen and the Stats screen.
  */
+const PAGE_KEY = 'questhq:page';
+
+function readPage(): Page {
+  try {
+    return localStorage.getItem(PAGE_KEY) === 'stats' ? 'stats' : 'today';
+  } catch {
+    return 'today';
+  }
+}
+
 export function Dashboard({ email, onSignOut }: { email: string | null; onSignOut: () => void }) {
   const { loading, loadError, reload } = useData();
   const today = useToday();
@@ -33,6 +45,15 @@ export function Dashboard({ email, onSignOut }: { email: string | null; onSignOu
   const closeReward = useCallback(() => setReward(null), []);
   const { earned } = useStickerCollection(today);
   const collected = earned.filter((d) => d.length > 0).length;
+  const [page, setPage] = useState<Page>(readPage);
+  const changePage = useCallback((p: Page) => {
+    setPage(p);
+    try {
+      localStorage.setItem(PAGE_KEY, p);
+    } catch {
+      // Remembering the screen is only a convenience.
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -55,17 +76,26 @@ export function Dashboard({ email, onSignOut }: { email: string | null; onSignOu
     );
   }
 
+  const header = (
+    <Header
+      today={today}
+      page={page}
+      onPage={changePage}
+      stickers={collected}
+      onOpenSettings={() => setSettings('quest')}
+      onOpenStickers={() => setBookOpen(true)}
+    />
+  );
+
   return (
     <main className="mx-auto min-h-dvh max-w-[1440px] px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-5 lg:py-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-3 lg:min-h-[calc(100dvh-2rem)] lg:grid-cols-12 lg:grid-rows-[auto_auto_1fr] lg:gap-3.5">
-        <div className="order-1 md:col-span-2 lg:order-none lg:col-span-3">
-          <Header
-            today={today}
-            stickers={collected}
-            onOpenSettings={() => setSettings('quest')}
-            onOpenStickers={() => setBookOpen(true)}
-          />
-        </div>
+      {page === 'stats' && <StatsPage today={today} header={header} />}
+      {/* Kept mounted while on Stats so a running timer keeps going. */}
+      <div
+        hidden={page !== 'today'}
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-3 lg:min-h-[calc(100dvh-2rem)] lg:grid-cols-12 lg:grid-rows-[auto_auto_1fr] lg:gap-3.5"
+      >
+        <div className="order-1 md:col-span-2 lg:order-none lg:col-span-3">{page === 'today' && header}</div>
         <div className="order-5 min-w-0 md:order-1 md:col-span-2 lg:order-none lg:col-span-9 [&>section]:h-full">
           <Countdowns today={today} onEdit={() => setSettings('countdowns')} />
         </div>

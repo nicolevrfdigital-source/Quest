@@ -36,6 +36,23 @@ export interface Countdown {
 export interface Settings {
   sticky_note: string;
   photo_path: string | null;
+  health_sources: HealthSources;
 }
 
 export type HabitCounts = Record<HabitKey, number>;
+
+export type HealthKind = 'steps' | 'calories_burned' | 'calories_consumed' | 'weight';
+
+/** One day's value for one kind from one source app (or 'manual', typed in Quest HQ). */
+export interface DailyHealthRow {
+  day: string;
+  kind: HealthKind;
+  origin: string;
+  value: number;
+}
+
+/** 1 = rough … 5 = amazing. */
+export type Mood = 1 | 2 | 3 | 4 | 5;
+
+/** Preferred source app per kind; missing means "pick automatically". */
+export type HealthSources = Partial<Record<HealthKind, string>>;

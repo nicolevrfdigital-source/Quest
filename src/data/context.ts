@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { SyncStatus } from '../lib/outbox';
-import type { Countdown, HabitKey, HabitLog, Quest, Settings } from '../lib/types';
+import type { Countdown, DailyHealthRow, HabitKey, HabitLog, HealthKind, HealthSources, Mood, Quest, Settings } from '../lib/types';
 import type { BackupFile } from '../lib/backup';
 
 export interface QuestInput {
@@ -22,6 +22,8 @@ export interface DataContextValue {
   reload: () => Promise<void>;
 
   habits: Map<string, HabitLog>;
+  health: DailyHealthRow[];
+  moods: Map<string, Mood>;
   quests: Quest[];
   activeQuest: Quest | null;
   countdowns: Countdown[];
@@ -33,6 +35,13 @@ export interface DataContextValue {
   retrySync: () => void;
   setHabit: (day: string, key: HabitKey, value: boolean) => void;
   setNote: (text: string) => void;
+  setMood: (day: string, mood: Mood | null) => void;
+  /** Types a number in by hand (it wins over synced data); null removes it. */
+  setManualHealth: (day: string, kind: HealthKind, value: number | null) => Promise<void>;
+  setHealthSources: (sources: HealthSources) => Promise<void>;
+  /** Makes a new secret key for the phone (replacing any old one) and returns it. */
+  createHealthToken: () => Promise<string>;
+  healthToken: { created_at: string; last_used_at: string | null } | null;
 
   createQuest: (q: QuestInput) => Promise<void>;
   updateQuest: (id: string, q: QuestInput) => Promise<void>;

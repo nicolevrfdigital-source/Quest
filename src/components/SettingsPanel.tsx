@@ -1,17 +1,20 @@
-import { CalendarHeart, Download, Flag, LogOut, Plus, Trash2, Upload, X } from 'lucide-react';
+import { CalendarHeart, Check, Copy, Download, Flag, KeyRound, LogOut, Plus, Smartphone, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useData } from '../data/context';
 import { addDays, diffDays, formatShort, isDayString } from '../lib/dates';
 import { countCompletedDays } from '../lib/stats';
 import { parseBackup, type BackupFile } from '../lib/backup';
 import { HABITS } from '../lib/habits';
-import type { Countdown, Quest } from '../lib/types';
+import { originsByKind } from '../lib/health';
+import { healthWebhook } from '../lib/supabase';
+import type { Countdown, HealthKind, Quest } from '../lib/types';
 
-export type SettingsTab = 'quest' | 'countdowns' | 'data';
+export type SettingsTab = 'quest' | 'countdowns' | 'health' | 'data';
 
 const TABS: { id: SettingsTab; label: string }[] = [
   { id: 'quest', label: 'Quests' },
   { id: 'countdowns', label: 'Countdowns' },
+  { id: 'health', label: 'Health' },
   { id: 'data', label: 'Data & account' },
 ];
 
@@ -61,7 +64,7 @@ export function SettingsPanel({
             <X className="size-5" />
           </button>
         </div>
-        <div className="flex gap-1.5 overflow-x-auto px-5 pt-3" role="tablist">
+        <div className="flex gap-1.5 overflow-x-auto px-5 pt-3 pb-1" role="tablist">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -77,6 +80,7 @@ export function SettingsPanel({
         <div className="overflow-y-auto px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           {tab === 'quest' && <QuestSettings today={today} />}
           {tab === 'countdowns' && <CountdownSettings />}
+          {tab === 'health' && <HealthSettings />}
           {tab === 'data' && <DataSettings email={email} onSignOut={onSignOut} />}
         </div>
       </div>
@@ -469,7 +473,7 @@ function DataSettings({ email, onSignOut }: { email: string | null; onSignOut: (
 
   return (
     <>
-      <Section title="Export" hint="Download your habit records, quests, countdowns and sticky note as a JSON file.">
+      <Section title="Export" hint="Download your habit records, moods, quests, countdowns and sticky note as a JSON file. (Health numbers live on your phone and aren’t included.)">
         <button onClick={download} className="btn bg-sage-deep text-white">
           <Download className="size-4" /> Download backup
         </button>
@@ -486,6 +490,7 @@ function DataSettings({ email, onSignOut }: { email: string | null; onSignOut: (
               <li>{pending.habit_logs.length} days of habit records</li>
               <li>{pending.quests.length} quests</li>
               <li>{pending.countdowns.length} countdowns</li>
+              {pending.moods.length > 0 && <li>{pending.moods.length} days of moods</li>}
               <li>{pending.sticky_note ? 'A sticky note' : 'An empty sticky note'}</li>
               {pending.exported_at && <li>Exported {new Date(pending.exported_at).toLocaleString()}</li>}
             </ul>
@@ -509,6 +514,143 @@ function DataSettings({ email, onSignOut }: { email: string | null; onSignOut: (
             <LogOut className="size-4" /> Sign out
           </button>
         </div>
+      </Section>
+    </>
+  );
+}
+
+/* ───────────────────────── health ───────────────────────── */
+
+const SOURCE_KINDS: { kind: HealthKind; label: string }[] = [
+  { kind: 'calories_burned', label: 'Calories burned' },
+  { kind: 'calories_consumed', label: 'Calories eaten' },
+  { kind: 'weight', label: 'Weight' },
+];
+
+/** Friendlier names for the source apps people are likely to have. */
+function appName(origin: string): string {
+  const known: Record<string, string> = {
+    'com.fitbit.FitbitMobile': 'Fitbit / Google Health',
+    'com.google.android.apps.fitness': 'Google Fit',
+    'com.google.android.apps.healthdata': 'Health Connect',
+    'com.cronometer.android.gold': 'Cronometer',
+    'com.cronometer.android': 'Cronometer',
+  };
+  return known[origin] ?? origin;
+}
+
+function timeAgo(iso: string): string {
+  const mins = Math.round((Date.now() - Date.parse(iso)) / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `${hours} h ago`;
+  return `${Math.round(hours / 24)} days ago`;
+}
+
+function CopyField({ label, value, secret = false }: { label: string; value: string; secret?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard can be blocked; the text is selectable anyway.
+    }
+  };
+  return (
+    <div className="mt-2">
+      <span className="label">{label}</span>
+      <div className="flex gap-2">
+        <code className={`min-w-0 flex-1 truncate rounded-xl border-[1.5px] border-line bg-white px-3 py-2 text-sm select-all ${secret ? 'font-bold' : ''}`}>
+          {value}
+        </code>
+        <button onClick={() => void copy()} className="btn shrink-0 bg-white text-ink" aria-label={`Copy ${label}`}>
+          {copied ? <Check className="size-4 text-sage-deep" /> : <Copy className="size-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function HealthSettings() {
+  const { health, healthToken, createHealthToken, settings, setHealthSources } = useData();
+  const [token, setToken] = useState<string | null>(null);
+  const make = useAction();
+  const sources = useAction();
+  const origins = useMemo(() => originsByKind(health), [health]);
+
+  const newKey = async () => {
+    if (healthToken && !window.confirm('Make a new key? The old one stops working, so you’ll need to paste the new one into the phone app.')) return;
+    let t = '';
+    if (await make.run(async () => void (t = await createHealthToken()))) setToken(t);
+  };
+
+  return (
+    <>
+      <Section
+        title="Connect your phone"
+        hint="Your Android phone sends steps, calories and weight from Health Connect using the “HC Webhook” app. Mood and typed-in numbers work without it."
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-cream p-4">
+          <span className="flex items-center gap-2 text-sm font-semibold text-muted">
+            <Smartphone className="size-5 text-sage-deep" />
+            {!healthToken
+              ? 'Not connected yet'
+              : healthToken.last_used_at
+                ? `Connected · last sync ${timeAgo(healthToken.last_used_at)}`
+                : 'Key ready · waiting for the first sync'}
+          </span>
+          <button onClick={() => void newKey()} disabled={make.busy} className="btn bg-sage-deep text-white">
+            <KeyRound className="size-4" /> {healthToken ? 'Make a new key' : 'Create phone key'}
+          </button>
+        </div>
+        <ErrorText error={make.error} />
+
+        {token && (
+          <div className="mt-3 rounded-2xl bg-butter-soft p-4">
+            <p className="font-extrabold">In HC Webhook, add a webhook with these values</p>
+            <p className="text-sm font-semibold text-muted">
+              The secret key is shown only now — copy it before closing. Format: JSON.
+            </p>
+            <CopyField label="Webhook URL" value={healthWebhook.url} />
+            <CopyField label="Header: apikey" value={healthWebhook.apikey} />
+            <CopyField label="Header: x-quest-token (secret)" value={token} secret />
+          </div>
+        )}
+      </Section>
+
+      <Section
+        title="Which app to trust"
+        hint="If two apps report the same thing, pick the one you trust. Automatic uses the higher number. Steps follow Health Connect’s own app priority."
+      >
+        <div className="grid gap-2">
+          {SOURCE_KINDS.map(({ kind, label }) => (
+            <label key={kind} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-cream px-4 py-3">
+              <span className="text-sm font-extrabold">{label}</span>
+              <select
+                className="field !min-h-10 !w-auto max-w-[60%]"
+                value={settings.health_sources[kind] ?? ''}
+                disabled={sources.busy}
+                onChange={(e) => {
+                  const next = { ...settings.health_sources };
+                  if (e.target.value) next[kind] = e.target.value;
+                  else delete next[kind];
+                  void sources.run(() => setHealthSources(next));
+                }}
+              >
+                <option value="">Automatic</option>
+                {origins[kind].map((o) => (
+                  <option key={o} value={o}>
+                    {appName(o)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        <ErrorText error={sources.error} />
       </Section>
     </>
   );

@@ -25,6 +25,8 @@ Guía personal de cómo está montada mi Quest HQ, cómo usarla y qué hacer si 
 - **Daily challenge**: un reto de movimiento pequeñito cada día (32 en total, en `src/lib/challenges.ts`). Sale “al azar” pero es el mismo en todos los dispositivos, y no se repite hasta que salieron todos.
 - **Stickers** 🎀: si completo los **4** en un día, gano un sticker (sale un pop-up). El botón **Stickers** del header abre el sticker book. Hay 32 dibujos (`src/components/stickers.tsx`); al completarlos se repiten con un “×2”. No se guardan aparte: se calculan del historial de hábitos.
 - **Little wins**: cuenta los días completados en el quest actual y en total. Nunca se reinicia.
+- **Today / Stats** (arriba, en el header): cambia entre la pantalla de hábitos y la de estadísticas. La app recuerda en cuál estaba.
+- **Mood**: debajo de las tarjetas de *My day* elijo una carita (Rough, Low, Okay, Good, Amazing). Si la toco otra vez, se quita.
 - **Countdowns**: toca cualquier tarjeta para editarlos, añadir o quitar.
 - **Nota**: toca el post-it y escribe. Se guarda sola.
 - **Mensaje**: “Another one” muestra otro.
@@ -80,12 +82,12 @@ Todo se hace en **⚙️ Settings → Quests**:
 ## ⚙️ Cómo está configurado
 
 ### Supabase
-- Tablas: `habit_logs` (incluye la columna `challenge`), `quests`, `countdowns`, `user_settings`, todas protegidas con **RLS** (solo mi usuario ve mis datos).
+- Tablas: `habit_logs` (incluye la columna `challenge`), `quests`, `countdowns`, `user_settings`, `daily_health`, `health_samples`, `moods`, `health_ingest_tokens`, todas protegidas con **RLS** (solo mi usuario ve mis datos).
 - Bucket **`photos`** privado. La foto se muestra con enlaces temporales de 1 hora.
 - **Authentication → URL Configuration**
   - Site URL: `https://nicolevrfdigital-source.github.io/Quest/`
   - Redirect URLs: esa misma y `http://localhost:5173/`
-- La estructura de la base de datos está en `supabase/migrations/` — `20261009000000_init.sql` (ya ejecutado) y `20261010000000_daily_challenge.sql` (añade el reto diario; hay que ejecutarlo una vez en el **SQL Editor** de Supabase **antes** de publicar esa versión).
+- La estructura de la base de datos está en `supabase/migrations/` — `20261009000000_init.sql` (ya ejecutado) `20261010000000_daily_challenge.sql` (reto diario, ya ejecutado) y `20261011000000_health_stats.sql` (stats de salud y ánimo). Cada migración nueva se ejecuta una vez en el **SQL Editor** de Supabase **antes** de publicar esa versión. Supabase avisa que tiene operaciones “destructive”: es por los `delete` dentro de la función de importar copias, no borra nada al ejecutarse.
 
 ### GitHub
 - Repositorio **público** (GitHub Pages gratis solo funciona en públicos). Mis datos no están en el código, están en Supabase.
@@ -128,6 +130,39 @@ y abrir http://localhost:5173/. El archivo `.env.local` (con la URL y la key) es
 
 ---
 
+## 📊 Stats de salud (pantalla Stats)
+
+### Qué muestra
+- **My day**: pasos, calorías quemadas, calorías comidas y peso (en lb) del día, con estrellas, más el ánimo.
+- **Looking at**: elijo un quest (empezado o terminado), *Last 7 days* o *Last 30 days*. Muestra el promedio de estrellas por día, los pasos totales, el cambio de peso y el ánimo más frecuente.
+- **Star days**: calendario del rango con las estrellas y la carita de cada día. Tocando un día, *My day* muestra ese día.
+
+### Las estrellas (máximo 9 por día)
+| | ★★★ | ★★ | ★ | sin estrellas |
+|---|---|---|---|---|
+| **Pasos** | 10,000+ | 7,000+ | menos de 7,000 | — |
+| **Quemadas** | 2,000+ kcal | 1,700+ | 1,500+ | menos de 1,500 |
+| **Comidas** | hasta 1,400 kcal | hasta 1,600 | más de 1,600 | — |
+
+Si no hay datos de algo ese día, no suma estrellas (se ve “—”). El peso no da estrellas, solo se sigue. Los números se cambian en `src/lib/health.ts`.
+
+### Escribir un número a mano
+Tocar cualquier tarjeta de *My day* → escribir el número → ✓. Ese número gana sobre lo que llegue del teléfono (aparece la etiqueta “typed”). Para volver al número del teléfono: tocar la tarjeta → *Use the synced number instead*.
+
+### Cómo llegan los datos del teléfono
+**Reloj Versa → app Google Health (Fitbit) → Health Connect (Android) → app HC Webhook → Supabase → Quest HQ**
+
+1. **Health Connect** (*Ajustes → Health Connect*): la app de Google Health/Fitbit tiene que tener permiso para **escribir** ahí. En *Datos y acceso → Pasos → Fuentes de datos y prioridad*, poner Fitbit/Google Health primero (si no, cuenta los pasos del teléfono, que salen más bajos). Lo mismo con Cronometer si quiero las calorías comidas.
+2. **Quest HQ → Settings → Health → Create phone key.** Aparecen 3 valores para copiar. La clave secreta (`x-quest-token`) **solo se ve una vez**. Si se pierde, se hace otra con *Make a new key* (la vieja deja de funcionar).
+3. **App HC Webhook** (de Google Play): darle permiso de leer **Steps, Total calories burned, Nutrition y Weight**. Añadir un webhook: pegar la **URL**, formato **JSON**, y dos **headers**: `apikey` y `x-quest-token` con sus valores. Dejar la **resolución por defecto** de cada tipo (pasos = diario; calorías y comida = registros completos). Elegir sincronizar cada 30–60 min y probar con *Sync now*.
+4. En Settings → Health debe decir **“Connected · last sync …”**.
+
+Los datos llegan cada vez que la app del teléfono sincroniza, no al instante. Si borro una comida en Cronometer después de que ya se sincronizó, en Quest HQ puede seguir contando: lo corrijo escribiendo el número a mano.
+
+**Which app to trust** (Settings → Health): si dos apps mandan calorías o peso (por ejemplo Fitbit y Google Fit), elijo cuál usar. En *Automatic* se usa el número más alto.
+
+---
+
 ## 💡 Ideas para después
 
 - **Paquetes de stickers por quest** 🎀: que cada quest tenga su propia colección con tema (ej. *Pre-Trip* → maletas, aviones, playa; invierno → copos, chocolate caliente; primavera → flores, mariposas). El sticker book tendría una página por quest, como un álbum de recuerdos. Los 32 actuales quedan como el paquete “clásico” (para días sin quest activo).
@@ -143,3 +178,4 @@ y abrir http://localhost:5173/. El archivo `.env.local` (con la URL y la key) es
   - Se cambió el inicio de sesión de código por correo a email + contraseña (sin SMTP).
   - Arreglado: página en blanco por variables de GitHub con el nombre incluido en el valor. Ahora la app muestra un mensaje en vez de quedar en blanco.
 - **10 oct 2026**: Daily challenges (32 retos de movimiento como 4.º hábito) + sticker book con 32 stickers que se ganan al completar los 4 hábitos de un día.
+- **11 oct 2026**: Pantalla **Stats**: pasos, calorías, peso y ánimo con estrellas por día, resumen por quest y calendario. Los datos llegan desde el teléfono Android (Health Connect + app HC Webhook).

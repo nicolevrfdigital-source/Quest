@@ -1,14 +1,18 @@
-import type { HabitLog } from './types';
+import type { HabitLog, Mood } from './types';
 
 /**
  * A tiny persistent write queue for the edits that happen constantly (habit
- * check-ins and the sticky note). Each edit is stored under a key, so only the
+ * check-ins, moods and the sticky note). Each edit is stored under a key, so only the
  * latest value per day / per note is kept. The queue survives reloads via
  * localStorage and keeps retrying with backoff, so a flaky connection never
  * silently drops an edit.
  */
 
-export type PendingOp = { kind: 'habit'; log: HabitLog } | { kind: 'note'; text: string };
+export type PendingOp =
+  | { kind: 'habit'; log: HabitLog }
+  | { kind: 'note'; text: string }
+  /** `mood: null` clears the day's mood. */
+  | { kind: 'mood'; day: string; mood: Mood | null };
 
 export type SyncState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -21,7 +25,9 @@ export interface SyncStatus {
 const MAX_RETRY_MS = 60_000;
 
 export function opKey(op: PendingOp): string {
-  return op.kind === 'habit' ? `habit:${op.log.day}` : 'note';
+  if (op.kind === 'habit') return `habit:${op.log.day}`;
+  if (op.kind === 'mood') return `mood:${op.day}`;
+  return 'note';
 }
 
 export class Outbox {

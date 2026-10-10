@@ -1,7 +1,8 @@
 import { Check, CloudOff, LoaderCircle, RotateCw } from 'lucide-react';
 import { useData } from '../data/context';
 
-export function SaveStatus() {
+/** `compact` shows just an icon unless something needs attention. */
+export function SaveStatus({ compact = false }: { compact?: boolean }) {
   const { sync, retrySync } = useData();
 
   if (sync.state === 'error') {
@@ -16,6 +17,19 @@ export function SaveStatus() {
         <RotateCw className="size-3.5" />
         <span className="sr-only">Retry now</span>
       </button>
+    );
+  }
+  if (compact) {
+    const saving = sync.state === 'saving';
+    return (
+      <span
+        role="status"
+        title={saving ? 'Saving…' : 'All saved'}
+        className={`grid size-4 place-items-center rounded-full ${saving ? 'bg-butter-soft text-butter-deep' : 'bg-sage-soft text-sage-deep'}`}
+      >
+        {saving ? <LoaderCircle className="size-3 animate-spin" /> : <Check className="size-2.5" strokeWidth={3.5} />}
+        <span className="sr-only">{saving ? 'Saving…' : 'All saved'}</span>
+      </span>
     );
   }
   if (sync.state === 'saving') {
